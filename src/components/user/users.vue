@@ -38,8 +38,8 @@
     <template slot-scope="scope">
       <el-button type="primary" icon="el-icon-edit" size="mini" @click="showEditDialog(scope.row.id)"></el-button>
       <el-button type="danger" icon="el-icon-delete" size="mini" @click="removeUserById(scope.row.id)"></el-button>
-      <el-tooltip  placement="top" content="分配角色" enterable="false">
-      <el-button type="warning" icon="el-icon-setting" size="mini"></el-button>
+      <el-tooltip  placement="top" content="分配角色" enterable="false" >
+      <el-button type="warning" icon="el-icon-setting" size="mini" @click="setRole(scope.row)"></el-button>
      </el-tooltip>
     </template>
   </el-table-column>
@@ -104,6 +104,32 @@
   <span slot="footer" class="dialog-footer">
     <el-button @click="editDialogVisible = false">取 消</el-button>
     <el-button type="primary" @click="editUserInfo()">确 定</el-button>
+  </span>
+</el-dialog>
+
+<el-dialog
+  title="分配角色"
+  :visible.sync="SRDV"
+  width="50%"
+  append-to-body
+  @close = "SRDC()">
+  <div>
+    <p>当前用户:{{this.usrInfo.username}}</p>
+    <p>当前角色:{{this.usrInfo.role_name}}</p>
+    <p>分配选项:
+      <el-select v-model="selectedRoleId" placeholder="请选择">
+      <el-option
+      v-for="item in rolesList"
+      :key="item.id"
+      :label="item.roleName"
+      :value="item.id">
+    </el-option>
+  </el-select>
+    </p>
+  </div>
+  <span slot="footer" class="dialog-footer">
+    <el-button @click="SRDV = false">取 消</el-button>
+    <el-button type="primary" @click="roleConfirm()">确 定</el-button>
   </span>
 </el-dialog>
 
@@ -179,7 +205,12 @@ data() {
       ]
     },
     editDialogVisible: false,
-    editForm: {}
+    editForm: {},
+    SRDV: false,
+    usrInfo: {},
+    rolesList: [],
+    selectedRoleId: ' '
+
   }
 },
 created() {
@@ -260,6 +291,31 @@ this.editForm = res.data
     res = await this.$http.delete('users/' + id)
     this.getUserList()
     console.log(res)
+  },
+ async setRole(row) {
+    this.usrInfo = row
+  const { data: res } = await this.$http.get('roles')
+  if (res.meta.status !== 200) return this.$message.error(res.meta.msg)
+  this.rolesList = res.data
+    this.SRDV = true
+  },
+ async roleConfirm() {
+    if (!this.selectedRoleId) {
+      return this.$message.error('未指定分配角色')
+    }
+  const { data: res } = await this.$http.put(`users/${this.usrInfo.id}/role`, {
+      rid: this.selectedRoleId
+    })
+    if (res.meta.status !== 200) {
+      return this.$message.error(res.meta.msg)
+    }
+    this.$message.success(res.meta.msg)
+    this.getUserList()
+    this.SRDV = false
+  },
+  SRDC() {
+    this.selectedRoleId = ' '
+    this.usrInfo = {}
   }
 }
 
